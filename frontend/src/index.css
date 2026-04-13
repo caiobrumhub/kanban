@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background-color: #0f0f1a;
+    color: #e2e8f0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #16162a;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #2e2e52;
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #4f46e5;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500
+           text-white font-medium rounded-lg transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+           focus:ring-offset-surface-900 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-white
+           hover:bg-surface-700 font-medium rounded-lg transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-surface-600;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-4 py-2 text-red-400 hover:text-white
+           hover:bg-red-600/20 font-medium rounded-lg transition-all duration-200;
+  }
+
+  .input-field {
+    @apply w-full px-3 py-2 bg-surface-700 border border-surface-600
+           rounded-lg text-white placeholder-slate-500
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           transition-all duration-200;
+  }
+
+  .card-surface {
+    @apply bg-surface-800 border border-surface-600 rounded-xl;
+  }
+
+  .glass {
+    @apply bg-surface-800/80 backdrop-blur-md border border-surface-600/50;
+  }
+}
