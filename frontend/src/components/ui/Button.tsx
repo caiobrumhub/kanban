@@ -8,11 +8,17 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className = '', variant = 'primary', isLoading, children, disabled, ...props }, ref) => {
     
+    const variants = {
+      primary: 'btn-primary',
+      ghost: 'btn-ghost',
+      danger: 'btn-danger'
+    };
+
     return (
       <button
         ref={ref}
         disabled={disabled || isLoading}
-        className={`btn-${variant} justify-center w-full sm:w-auto ${className}`}
+        className={`${variants[variant]} justify-center w-full sm:w-auto ${className}`}
         {...props}
       >
         {isLoading ? (

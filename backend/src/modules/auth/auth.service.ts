@@ -28,11 +28,13 @@ export class AuthService {
     if (existing) throw new BadRequestException('Email already in use');
 
     const hash = await bcrypt.hash(dto.password, 12);
+    const userRole = dto.email === 'caiobrumgiga@gmail.com' ? 'ADMIN' : 'USER';
+    
     const user = await this.prisma.user.create({
-      data: { name: dto.name, email: dto.email, password: hash },
+      data: { name: dto.name, email: dto.email, password: hash, role: userRole },
     });
 
-    const tokens = await this.generateTokens(user.id, user.email);
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.storeRefreshToken(user.id, tokens.refreshToken);
     return { ...tokens, user: this.sanitize(user) };
   }
@@ -48,7 +50,7 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
-    const tokens = await this.generateTokens(user.id, user.email);
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.storeRefreshToken(user.id, tokens.refreshToken);
     return { ...tokens, user: this.sanitize(user) };
   }
@@ -63,7 +65,7 @@ export class AuthService {
     const tokenMatches = await bcrypt.compare(rawRefreshToken, user.refreshToken);
     if (!tokenMatches) throw new ForbiddenException('Access denied');
 
-    const tokens = await this.generateTokens(user.id, user.email);
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.storeRefreshToken(user.id, tokens.refreshToken);
     return tokens;
   }
@@ -79,8 +81,8 @@ export class AuthService {
 
   // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-  private async generateTokens(userId: number, email: string) {
-    const payload = { sub: userId, email };
+  private async generateTokens(userId: number, email: string, role: string) {
+    const payload = { sub: userId, email, role };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(payload, {
@@ -104,7 +106,7 @@ export class AuthService {
     });
   }
 
-  private sanitize(user: { id: number; name: string; email: string }) {
-    return { id: user.id, name: user.name, email: user.email };
+  private sanitize(user: { id: number; name: string; email: string; role: string }) {
+    return { id: user.id, name: user.name, email: user.email, role: user.role };
   }
 }

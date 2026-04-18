@@ -34,6 +34,11 @@ const MainLayout = () => {
               <span className="text-sm font-medium text-white">{user?.name}</span>
               <span className="text-xs text-slate-400">{user?.email}</span>
             </div>
+            {user?.role === 'ADMIN' && (
+              <Link to="/admin" className="text-sm font-medium text-primary-400 hover:text-primary-300 mr-2 bg-primary-500/10 px-2 py-1 rounded">
+                Painel Admin
+              </Link>
+            )}
             <button
               onClick={handleLogout}
               className="btn-ghost text-sm"
