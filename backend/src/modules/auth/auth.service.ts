@@ -46,6 +46,7 @@ export class AuthService {
       where: { email: dto.email },
     });
     if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!user.isActive) throw new UnauthorizedException('Conta inativa. Contate o suporte.');
 
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
@@ -61,6 +62,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.refreshToken)
       throw new ForbiddenException('Access denied');
+    if (!user.isActive) throw new ForbiddenException('Conta inativa. Contate o suporte.');
 
     const tokenMatches = await bcrypt.compare(rawRefreshToken, user.refreshToken);
     if (!tokenMatches) throw new ForbiddenException('Access denied');

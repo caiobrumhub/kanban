@@ -313,7 +313,7 @@ const BoardPage = () => {
   if (!currentBoard) return <div className="p-8 text-center text-red-400">Board not found</div>;
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
       <div className="mb-6 flex justify-between items-center shrink-0">
         <h1 className="text-2xl font-bold text-white">{currentBoard.title}</h1>
         <Button onClick={() => setIsColModalOpen(true)}>Adicionar Coluna</Button>
@@ -347,10 +347,10 @@ const BoardPage = () => {
             {/* Empty state visually representing "add zone" */}
             <button 
               onClick={() => setIsColModalOpen(true)}
-              className="w-80 flex-shrink-0 rounded-xl border border-dashed border-surface-600 bg-surface-800/30 hover:bg-surface-800/60 p-4 text-slate-400 hover:text-white transition-all flex items-center justify-center gap-2 h-14"
+              className="w-72 flex-shrink-0 rounded-xl border-2 border-dashed border-surface-600/50 bg-surface-800/20 hover:bg-surface-800/50 hover:border-surface-500 text-surface-600 hover:text-slate-400 transition-all flex items-center justify-center min-h-[120px] group"
+              title="Adicionar Nova Coluna"
             >
-               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-               Nova Coluna
+               <i className="fi fi-rr-plus text-3xl group-hover:scale-110 transition-transform"></i>
             </button>
           </div>
 

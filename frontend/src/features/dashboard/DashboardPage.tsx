@@ -10,28 +10,12 @@ import Button from '../../components/ui/Button';
 const DashboardPage = () => {
   const navigate = useNavigate();
   const { boards, setBoards } = useBoardStore();
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
   // Create Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [isCreating, setIsCreating] = useState(false);
-
-  useEffect(() => {
-    fetchBoards();
-  }, []);
-
-  const fetchBoards = async () => {
-    try {
-      const { data } = await api.get('/boards');
-      setBoards(data);
-    } catch {
-      setError('Erro ao carregar seus quadros.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleCreateBoard = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,13 +48,7 @@ const DashboardPage = () => {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="py-6 px-4 max-w-7xl mx-auto w-full">
@@ -79,11 +57,8 @@ const DashboardPage = () => {
           <h1 className="text-3xl font-bold tracking-tight text-white mb-1">Seus Quadros</h1>
           <p className="text-slate-400">Gerencie seus projetos e tarefas</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto shadow-glow">
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
+        <Button onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto shadow-glow flex items-center gap-2">
+          <i className="fi fi-rr-plus"></i>
           Novo Quadro
         </Button>
       </div>
@@ -94,13 +69,8 @@ const DashboardPage = () => {
         </div>
       ) : boards.length === 0 ? (
         <div className="text-center py-20 px-4 card-surface border-dashed border-2">
-          <div className="w-16 h-16 bg-surface-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="12" y1="18" x2="12" y2="12"></line>
-              <line x1="9" y1="15" x2="15" y2="15"></line>
-            </svg>
+          <div className="w-16 h-16 bg-surface-700/50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400 text-3xl">
+            <i className="fi fi-rr-folder-open"></i>
           </div>
           <h3 className="text-xl font-semibold mb-2">Nenhum quadro criado</h3>
           <p className="text-slate-400 mb-6 max-w-sm mx-auto">
@@ -122,22 +92,16 @@ const DashboardPage = () => {
                 </h3>
                 <button 
                   onClick={(e) => handleDelete(board.id, e)}
-                  className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-surface-700"
+                  className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-surface-700 flex items-center justify-center"
                   title="Excluir quadro"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6"></polyline>
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                  </svg>
+                  <i className="fi fi-rr-trash"></i>
                 </button>
               </div>
               
               <div className="mt-auto pt-4 border-t border-surface-700 flex justify-between items-center text-sm text-slate-400">
                 <span className="flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="9" y1="3" x2="9" y2="21"></line>
-                  </svg>
+                  <i className="fi fi-rr-list"></i>
                   {board._count?.columns || 0} colunas
                 </span>
                 

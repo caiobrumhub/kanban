@@ -1,10 +1,28 @@
-import { Outlet, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { useBoardStore } from '../../store/boardStore';
 import { api } from '../../services/api';
+import Sidebar from './Sidebar';
 
 const MainLayout = () => {
-  const { user, logout } = useAuthStore();
+  const { logout } = useAuthStore();
+  const { setBoards } = useBoardStore();
   const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    fetchBoards();
+  }, []);
+
+  const fetchBoards = async () => {
+    try {
+      const { data } = await api.get('/boards');
+      setBoards(data);
+    } catch {
+      console.error('Error fetching boards for sidebar');
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -18,42 +36,45 @@ const MainLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-surface-950 flex flex-col">
-      {/* Navbar */}
-      <header className="h-16 border-b border-surface-600/50 bg-surface-900/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-full flex items-center justify-between">
-          <Link to="/" className="text-xl font-bold text-white flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
-              <span className="text-white text-sm font-bold">K</span>
-            </div>
-            Kanban<span className="text-primary-500">Board</span>
-          </Link>
+    <div className="min-h-screen bg-surface-950 flex">
+      {/* Sidebar Component */}
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex flex-col items-end mr-4">
-              <span className="text-sm font-medium text-white">{user?.name}</span>
-              <span className="text-xs text-slate-400">{user?.email}</span>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Navbar */}
+        <header className="h-16 border-b border-surface-600/50 bg-surface-900/50 backdrop-blur-md sticky top-0 z-40">
+          <div className="w-full px-4 md:px-6 h-full flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-800 transition-colors"
+                title="Abrir menu"
+              >
+                <i className="fi fi-rr-menu-burger text-lg flex"></i>
+              </button>
+              
+              {/* Optional page title could go here if we wanted */}
             </div>
-            {user?.role === 'ADMIN' && (
-              <Link to="/admin" className="text-sm font-medium text-primary-400 hover:text-primary-300 mr-2 bg-primary-500/10 px-2 py-1 rounded">
-                Painel Admin
-              </Link>
-            )}
-            <button
-              onClick={handleLogout}
-              className="btn-ghost text-sm"
-              title="Logout"
-            >
-              Sair
-            </button>
+
+            <div className="flex items-center gap-4">
+              <button
+                onClick={handleLogout}
+                className="btn-ghost text-sm flex items-center gap-2"
+                title="Sair do sistema"
+              >
+                <i className="fi fi-rr-sign-out-alt mt-0.5"></i>
+                <span className="hidden sm:inline">Sair</span>
+              </button>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main className="flex-1 container mx-auto p-4 flex flex-col h-[calc(100vh-4rem)]">
-        <Outlet />
-      </main>
+        {/* Outlet Content */}
+        <main className="flex-1 overflow-x-hidden overflow-y-auto">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 };

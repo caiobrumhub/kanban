@@ -36,7 +36,7 @@ const BoardColumn = ({ column, cards, onAddCard, onCardClick, onDeleteColumn }: 
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-surface-800/80 backdrop-blur-sm rounded-xl w-80 flex flex-col flex-shrink-0 border border-surface-600/50 
+      className={`bg-surface-800/80 backdrop-blur-sm rounded-xl w-72 flex flex-col flex-shrink-0 border border-surface-600/50 
         ${isDragging ? 'opacity-50 ring-2 ring-primary-500' : ''}`}
     >
       {/* Column Header */}
