@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { useBoardStore } from '../../store/boardStore';
 import { api } from '../../services/api';
@@ -9,7 +9,10 @@ const MainLayout = () => {
   const { logout } = useAuthStore();
   const { setBoards } = useBoardStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const isBoardPage = location.pathname.startsWith('/board/');
 
   useEffect(() => {
     fetchBoards();
@@ -45,7 +48,7 @@ const MainLayout = () => {
         {/* Navbar */}
         <header className="h-16 border-b border-surface-600/50 bg-surface-900/50 backdrop-blur-md sticky top-0 z-40">
           <div className="w-full px-4 md:px-6 h-full flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
               <button 
                 onClick={() => setIsSidebarOpen(true)}
                 className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-800 transition-colors"
@@ -54,7 +57,16 @@ const MainLayout = () => {
                 <i className="fi fi-rr-menu-burger text-lg flex"></i>
               </button>
               
-              {/* Optional page title could go here if we wanted */}
+              {isBoardPage && (
+                <button 
+                  onClick={() => navigate('/')}
+                  className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-800 transition-colors ml-1 flex items-center gap-2"
+                  title="Voltar ao Início"
+                >
+                  <i className="fi fi-rr-home text-lg flex"></i>
+                  <span className="text-sm font-medium hidden sm:block">Dashboard</span>
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-4">
