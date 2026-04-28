@@ -19,11 +19,29 @@ const DashboardPage = () => {
 
   const handleCreateBoard = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle.trim()) return;
+    const titleToCreate = newTitle.trim();
+    if (!titleToCreate) return;
+
+    let finalTitle = titleToCreate;
+    const exactMatch = boards.find(b => b.title.toLowerCase() === titleToCreate.toLowerCase());
+
+    if (exactMatch) {
+      if (!window.confirm(`Você já possui um quadro com o nome "${titleToCreate}". Deseja criar outro com o mesmo nome?`)) {
+        return;
+      }
+      
+      let counter = 1;
+      let uniqueTitle = `${titleToCreate} (${counter})`;
+      while (boards.some(b => b.title.toLowerCase() === uniqueTitle.toLowerCase())) {
+        counter++;
+        uniqueTitle = `${titleToCreate} (${counter})`;
+      }
+      finalTitle = uniqueTitle;
+    }
 
     setIsCreating(true);
     try {
-      const { data } = await api.post('/boards', { title: newTitle });
+      const { data } = await api.post('/boards', { title: finalTitle });
       setBoards([data, ...boards]);
       setIsModalOpen(false);
       setNewTitle('');

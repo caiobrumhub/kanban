@@ -314,9 +314,9 @@ const BoardPage = () => {
 
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
-      <div className="mb-6 flex justify-between items-center shrink-0">
-        <h1 className="text-2xl font-bold text-white">{currentBoard.title}</h1>
-        <Button onClick={() => setIsColModalOpen(true)}>Adicionar Coluna</Button>
+      <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
+        <h1 className="text-2xl font-bold text-white break-words w-full sm:w-auto">{currentBoard.title}</h1>
+        <Button onClick={() => setIsColModalOpen(true)} className="w-full sm:w-auto">Adicionar Coluna</Button>
       </div>
 
       <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar">
