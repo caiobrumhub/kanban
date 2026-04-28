@@ -83,7 +83,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                   }`}
                 >
                   <div className="flex items-center gap-3 truncate">
-                    <i className="fi fi-rr-chalkboard mt-1"></i>
+                    <i className={`fi ${board.icon || 'fi-rr-chalkboard'} mt-1`}></i>
                     <span className="truncate">{board.title}</span>
                   </div>
                   {/* Board Counter */}

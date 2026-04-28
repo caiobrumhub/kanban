@@ -46,6 +46,8 @@ export interface Column {
 export interface Board {
   id: number;
   title: string;
+  color?: string;
+  icon?: string;
   userId: number;
   columns: Column[];
   _count?: { columns: number };

@@ -40,6 +40,8 @@ model User {
 model Board {
   id        Int      @id @default(autoincrement())
   title     String
+  color     String?  @default("bg-primary-500")
+  icon      String?  @default("fi-rr-chalkboard")
   userId    Int
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   columns   Column[]

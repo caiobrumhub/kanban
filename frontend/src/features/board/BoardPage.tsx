@@ -27,10 +27,13 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import Input from '../../components/ui/Input';
 
+const COLORS = ['bg-primary-500', 'bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-green-500', 'bg-emerald-500', 'bg-teal-500', 'bg-cyan-500', 'bg-blue-500', 'bg-indigo-500', 'bg-purple-500', 'bg-pink-500'];
+const ICONS = ['fi-rr-chalkboard', 'fi-rr-briefcase', 'fi-rr-rocket', 'fi-rr-star', 'fi-rr-heart', 'fi-rr-book', 'fi-rr-lightbulb', 'fi-rr-shopping-cart', 'fi-rr-bell', 'fi-rr-shield', 'fi-rr-graduation-cap', 'fi-rr-target'];
+
 const BoardPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentBoard, setCurrentBoard } = useBoardStore();
+  const { currentBoard, setCurrentBoard, boards, setBoards } = useBoardStore();
 
   const [isLoading, setIsLoading] = useState(true);
   
@@ -41,7 +44,14 @@ const BoardPage = () => {
   // Modals state
   const [isColModalOpen, setIsColModalOpen] = useState(false);
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
+  const [isEditBoardModalOpen, setIsEditBoardModalOpen] = useState(false);
+  
   const [colTitle, setColTitle] = useState('');
+  
+  // Board edit state
+  const [editBoardTitle, setEditBoardTitle] = useState('');
+  const [editBoardColor, setEditBoardColor] = useState('');
+  const [editBoardIcon, setEditBoardIcon] = useState('');
   
   // Card form state
   const [selectedColId, setSelectedColId] = useState<number | null>(null);
@@ -229,6 +239,31 @@ const BoardPage = () => {
      setIsCardModalOpen(true);
   };
 
+  const openEditBoardModal = () => {
+     if (!currentBoard) return;
+     setEditBoardTitle(currentBoard.title);
+     setEditBoardColor(currentBoard.color || 'bg-primary-500');
+     setEditBoardIcon(currentBoard.icon || 'fi-rr-chalkboard');
+     setIsEditBoardModalOpen(true);
+  };
+
+  const handleUpdateBoard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editBoardTitle.trim() || !currentBoard) return;
+    try {
+      const { data } = await api.patch(`/boards/${currentBoard.id}`, {
+        title: editBoardTitle,
+        color: editBoardColor,
+        icon: editBoardIcon
+      });
+      setCurrentBoard({ ...currentBoard, ...data });
+      setBoards(boards.map(b => b.id === currentBoard.id ? { ...b, ...data } : b));
+      setIsEditBoardModalOpen(false);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleCreateColumn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!colTitle.trim() || !currentBoard) return;
@@ -315,8 +350,18 @@ const BoardPage = () => {
   return (
     <div className="flex flex-col h-full overflow-hidden p-4 md:p-6">
       <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
-        <h1 className="text-2xl font-bold text-white break-words w-full sm:w-auto">{currentBoard.title}</h1>
-        <Button onClick={() => setIsColModalOpen(true)} className="w-full sm:w-auto">Adicionar Coluna</Button>
+        <div className="flex items-center gap-4">
+           <div className={`w-12 h-12 rounded-xl ${currentBoard.color || 'bg-primary-500'} flex items-center justify-center text-white shadow-glow shrink-0`}>
+             <i className={`fi ${currentBoard.icon || 'fi-rr-chalkboard'} text-2xl`}></i>
+           </div>
+           <div>
+             <h1 className="text-2xl font-bold text-white break-words w-full sm:w-auto">{currentBoard.title}</h1>
+             <button onClick={openEditBoardModal} className="text-sm text-slate-400 hover:text-white flex items-center gap-1.5 mt-0.5 transition-colors">
+               <i className="fi fi-rr-edit"></i> Editar quadro
+             </button>
+           </div>
+        </div>
+        <Button onClick={() => setIsColModalOpen(true)} className="w-full sm:w-auto shrink-0">Adicionar Coluna</Button>
       </div>
 
       <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar">
@@ -410,6 +455,45 @@ const BoardPage = () => {
                   <Button type="button" variant="ghost" onClick={() => setIsCardModalOpen(false)}>Cancelar</Button>
                   <Button type="submit">Salvar</Button>
                </div>
+             </div>
+          </form>
+       </Modal>
+
+       {/* Edit Board Modal */}
+       <Modal isOpen={isEditBoardModalOpen} onClose={() => setIsEditBoardModalOpen(false)} title="Editar Quadro">
+          <form onSubmit={handleUpdateBoard} className="space-y-4">
+             <Input label="Título do quadro" value={editBoardTitle} onChange={e => setEditBoardTitle(e.target.value)} required autoFocus/>
+             <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Cor do Quadro</label>
+                <div className="flex flex-wrap gap-2">
+                  {COLORS.map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setEditBoardColor(c)}
+                      className={`w-8 h-8 rounded-full ${c} ${editBoardColor === c ? 'ring-2 ring-white ring-offset-2 ring-offset-surface-900' : 'opacity-70 hover:opacity-100'} transition-all`}
+                    />
+                  ))}
+                </div>
+             </div>
+             <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Ícone do Quadro</label>
+                <div className="grid grid-cols-6 gap-2 bg-surface-900/50 p-2 rounded-lg border border-surface-700">
+                  {ICONS.map(i => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setEditBoardIcon(i)}
+                      className={`h-10 rounded flex items-center justify-center text-xl transition-all ${editBoardIcon === i ? 'bg-surface-700 text-white shadow-glow' : 'text-slate-400 hover:text-slate-200 hover:bg-surface-800'}`}
+                    >
+                      <i className={`fi ${i}`}></i>
+                    </button>
+                  ))}
+                </div>
+             </div>
+             <div className="flex justify-end gap-2 pt-4 border-t border-surface-700 mt-4">
+               <Button type="button" variant="ghost" onClick={() => setIsEditBoardModalOpen(false)}>Cancelar</Button>
+               <Button type="submit">Salvar</Button>
              </div>
           </form>
        </Modal>

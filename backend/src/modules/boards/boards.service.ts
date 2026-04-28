@@ -41,7 +41,7 @@ export class BoardsService {
 
   async create(userId: number, dto: CreateBoardDto) {
     return this.prisma.board.create({
-      data: { title: dto.title, userId },
+      data: { title: dto.title, color: dto.color, icon: dto.icon, userId },
     });
   }
 
