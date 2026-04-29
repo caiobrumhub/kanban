@@ -26,4 +26,11 @@ export class UpdateCardDto {
   @IsOptional()
   @IsInt()
   columnId?: number;
+
+  @IsOptional()
+  @IsInt()
+  clientId?: number;
+
+  @IsOptional()
+  isDone?: boolean;
 }

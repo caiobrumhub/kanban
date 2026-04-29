@@ -57,4 +57,22 @@ export class BoardsController {
   ) {
     return this.boardsService.remove(id, userId);
   }
+
+  @Post(':id/share')
+  shareBoard(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser('id') userId: number,
+    @Body('shareCode') shareCode: string,
+  ) {
+    return this.boardsService.shareBoard(id, userId, shareCode);
+  }
+
+  @Delete(':id/share/:sharedUserId')
+  removeSharedBoard(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('sharedUserId', ParseIntPipe) sharedUserId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.boardsService.removeSharedBoard(id, userId, sharedUserId);
+  }
 }

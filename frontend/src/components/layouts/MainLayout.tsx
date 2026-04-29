@@ -12,7 +12,7 @@ const MainLayout = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const isBoardPage = location.pathname.startsWith('/board/');
+  const showHomeButton = location.pathname !== '/';
 
   useEffect(() => {
     fetchBoards();
@@ -57,7 +57,7 @@ const MainLayout = () => {
                 <i className="fi fi-rr-menu-burger text-lg flex"></i>
               </button>
               
-              {isBoardPage && (
+              {showHomeButton && (
                 <button 
                   onClick={() => navigate('/')}
                   className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-800 transition-colors ml-1 flex items-center gap-2"

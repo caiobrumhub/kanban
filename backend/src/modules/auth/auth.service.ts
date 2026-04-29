@@ -51,6 +51,12 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, user.password);
     if (!valid) throw new UnauthorizedException('Invalid credentials');
 
+    // Update lastLogin and generate token
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() }
+    });
+
     const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.storeRefreshToken(user.id, tokens.refreshToken);
     return { ...tokens, user: this.sanitize(user) };
@@ -108,7 +114,7 @@ export class AuthService {
     });
   }
 
-  private sanitize(user: { id: number; name: string; email: string; role: string }) {
-    return { id: user.id, name: user.name, email: user.email, role: user.role };
+  private sanitize(user: { id: number; name: string; email: string; role: string; shareCode?: string | null }) {
+    return { id: user.id, name: user.name, email: user.email, role: user.role, shareCode: user.shareCode };
   }
 }

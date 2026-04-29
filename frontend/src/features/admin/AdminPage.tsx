@@ -11,17 +11,50 @@ const AdminPage = () => {
   const [error, setError] = useState('');
 
   // Tabs and Search
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'reports' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'reports' | 'settings' | 'parameters'>('overview');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  const [parameters, setParameters] = useState<{ id: number; key: string; value: string; description: string }[]>([]);
+  const [isLoadingParams, setIsLoadingParams] = useState(false);
+  const [paramsSearch, setParamsSearch] = useState('');
 
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [passwordResetUser, setPasswordResetUser] = useState<User | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newUserForm, setNewUserForm] = useState({ name: '', email: '', password: '', role: 'USER' });
   const [newPassword, setNewPassword] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    if (activeTab === 'parameters' && parameters.length === 0) {
+      fetchParameters();
+    }
+  }, [activeTab]);
+
+  const fetchParameters = async () => {
+    setIsLoadingParams(true);
+    try {
+      const { data } = await api.get('/system/parameters');
+      setParameters(data);
+    } catch {
+      // Ignora silenciosamente, exibe alerta apenas se necessário
+    } finally {
+      setIsLoadingParams(false);
+    }
+  };
+
+  const handleUpdateParameter = async (key: string, newValue: string) => {
+    try {
+      await api.patch(`/system/parameters/${key}`, { value: newValue });
+      setParameters(parameters.map(p => p.key === key ? { ...p, value: newValue } : p));
+    } catch {
+      alert('Erro ao atualizar parâmetro');
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -40,6 +73,22 @@ const AdminPage = () => {
       setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
     } catch {
       alert('Erro ao atualizar permissão, tente novamente.');
+    }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionLoading(true);
+    try {
+      const { data } = await api.post('/admin/users', newUserForm);
+      setUsers([data, ...users]);
+      setIsCreateModalOpen(false);
+      setNewUserForm({ name: '', email: '', password: '', role: 'USER' });
+      alert('Usuário criado com sucesso!');
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Erro ao criar usuário.');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -109,30 +158,41 @@ const AdminPage = () => {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex gap-6 border-b border-surface-600/50 mb-6 overflow-x-auto">
+      <div className="flex gap-4 md:gap-6 border-b border-surface-600/50 mb-6 overflow-x-auto justify-around md:justify-start px-2 md:px-0">
         <button 
-          className={`pb-3 px-1 border-b-2 font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'overview' ? 'border-primary-500 text-white' : 'border-transparent text-slate-400 hover:text-white hover:border-surface-500'}`} 
+          className={`pb-3 px-2 md:px-1 border-b-2 font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'overview' ? 'border-primary-500 text-primary-400 md:text-white' : 'border-transparent text-slate-400 hover:text-white hover:border-surface-500'}`} 
           onClick={() => setActiveTab('overview')}
+          title="Visão Geral"
         >
-          <i className="fi fi-rr-apps"></i> Visão Geral
+          <i className="fi fi-rr-apps text-2xl md:text-base"></i> <span className="hidden md:inline">Visão Geral</span>
         </button>
         <button 
-          className={`pb-3 px-1 border-b-2 font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'users' ? 'border-primary-500 text-white' : 'border-transparent text-slate-400 hover:text-white hover:border-surface-500'}`} 
+          className={`pb-3 px-2 md:px-1 border-b-2 font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'users' ? 'border-primary-500 text-primary-400 md:text-white' : 'border-transparent text-slate-400 hover:text-white hover:border-surface-500'}`} 
           onClick={() => setActiveTab('users')}
+          title="Gerenciar Usuários"
         >
-          <i className="fi fi-rr-users"></i> Gerenciar Usuários
+          <i className="fi fi-rr-users text-2xl md:text-base"></i> <span className="hidden md:inline">Usuários</span>
         </button>
         <button 
-          className={`pb-3 px-1 border-b-2 font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'reports' ? 'border-primary-500 text-white' : 'border-transparent text-slate-400 hover:text-white hover:border-surface-500'}`} 
+          className={`pb-3 px-2 md:px-1 border-b-2 font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'reports' ? 'border-primary-500 text-primary-400 md:text-white' : 'border-transparent text-slate-400 hover:text-white hover:border-surface-500'}`} 
           onClick={() => setActiveTab('reports')}
+          title="Relatórios"
         >
-          <i className="fi fi-rr-chart-pie-alt"></i> Relatórios
+          <i className="fi fi-rr-chart-pie-alt text-2xl md:text-base"></i> <span className="hidden md:inline">Relatórios</span>
         </button>
         <button 
-          className={`pb-3 px-1 border-b-2 font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'settings' ? 'border-primary-500 text-white' : 'border-transparent text-slate-400 hover:text-white hover:border-surface-500'}`} 
+          className={`pb-3 px-2 md:px-1 border-b-2 font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'settings' ? 'border-primary-500 text-primary-400 md:text-white' : 'border-transparent text-slate-400 hover:text-white hover:border-surface-500'}`} 
           onClick={() => setActiveTab('settings')}
+          title="Configurações"
         >
-          <i className="fi fi-rr-settings"></i> Configurações
+          <i className="fi fi-rr-settings text-2xl md:text-base"></i> <span className="hidden md:inline">Configurações</span>
+        </button>
+        <button 
+          className={`pb-3 px-2 md:px-1 border-b-2 font-medium transition-colors whitespace-nowrap flex items-center gap-2 ${activeTab === 'parameters' ? 'border-primary-500 text-primary-400 md:text-white' : 'border-transparent text-slate-400 hover:text-white hover:border-surface-500'}`} 
+          onClick={() => setActiveTab('parameters')}
+          title="Parâmetros do Sistema"
+        >
+          <i className="fi fi-rr-settings-sliders text-2xl md:text-base"></i> <span className="hidden md:inline">Parâmetros</span>
         </button>
       </div>
 
@@ -144,45 +204,49 @@ const AdminPage = () => {
 
       {/* OVERVIEW TAB */}
       {activeTab === 'overview' && !error && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
           <div 
             onClick={() => setActiveTab('users')}
-            className="card-surface p-6 cursor-pointer hover:-translate-y-1 hover:shadow-glow hover:border-primary-500/50 transition-all duration-300"
+            className="card-surface p-4 md:p-6 cursor-pointer hover:-translate-y-1 hover:shadow-glow transition-all duration-300 flex flex-col items-center justify-center text-center aspect-square md:aspect-auto md:block"
           >
-            <div className="w-12 h-12 bg-primary-500/20 text-primary-400 rounded-lg flex items-center justify-center mb-4 text-2xl">
+            <div className="w-16 h-16 md:w-12 md:h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full md:rounded-lg flex items-center justify-center mb-3 md:mb-4 text-2xl text-white shadow-lg mx-auto md:mx-0">
               <i className="fi fi-rr-users"></i>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">Cadastro de Usuários</h3>
-            <p className="text-slate-400 text-sm">Adicione, remova, promova ou inative usuários do sistema. Total: {users.length}</p>
+            <h3 className="text-[15px] md:text-xl font-bold text-white mb-1 md:mb-2">Gerenciar Usuários</h3>
+            <p className="text-slate-400 text-sm hidden md:block">Adicione, remova, promova ou inative usuários do sistema. Total: {users.length}</p>
           </div>
 
-          <div className="card-surface p-6 opacity-70 cursor-not-allowed">
-            <div className="w-12 h-12 bg-surface-700 text-slate-400 rounded-lg flex items-center justify-center mb-4 text-2xl">
+          <div className="card-surface p-4 md:p-6 opacity-70 cursor-not-allowed flex flex-col items-center justify-center text-center aspect-square md:aspect-auto md:block">
+            <div className="w-16 h-16 md:w-12 md:h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-full md:rounded-lg flex items-center justify-center mb-3 md:mb-4 text-2xl text-white shadow-lg mx-auto md:mx-0">
               <i className="fi fi-rr-chart-pie-alt"></i>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2 flex justify-between items-center">
+            <h3 className="text-[15px] md:text-xl font-bold text-white mb-1 md:mb-2 flex md:justify-between items-center flex-col md:flex-row gap-1">
               Relatórios
               <span className="text-[10px] bg-surface-600 px-2 py-0.5 rounded text-slate-300">Em Breve</span>
             </h3>
-            <p className="text-slate-400 text-sm">Visualize métricas, tarefas concluídas e produtividade das equipes.</p>
+            <p className="text-slate-400 text-sm hidden md:block">Visualize métricas, tarefas concluídas e produtividade das equipes.</p>
           </div>
 
-          <div className="card-surface p-6 opacity-70 cursor-not-allowed">
-            <div className="w-12 h-12 bg-surface-700 text-slate-400 rounded-lg flex items-center justify-center mb-4 text-2xl">
+          <div className="card-surface p-4 md:p-6 opacity-70 cursor-not-allowed flex flex-col items-center justify-center text-center aspect-square md:aspect-auto md:block">
+            <div className="w-16 h-16 md:w-12 md:h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full md:rounded-lg flex items-center justify-center mb-3 md:mb-4 text-2xl text-white shadow-lg mx-auto md:mx-0">
               <i className="fi fi-rr-settings"></i>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2 flex justify-between items-center">
-              Configurações Gerais
+            <h3 className="text-[15px] md:text-xl font-bold text-white mb-1 md:mb-2 flex md:justify-between items-center flex-col md:flex-row gap-1">
+              Configurações
               <span className="text-[10px] bg-surface-600 px-2 py-0.5 rounded text-slate-300">Em Breve</span>
             </h3>
-            <p className="text-slate-400 text-sm">Configure níveis de permissão, integrações e personalização da plataforma.</p>
+            <p className="text-slate-400 text-sm hidden md:block">Configure níveis de permissão, integrações e personalização da plataforma.</p>
           </div>
         </div>
       )}
 
       {/* USERS TAB */}
       {activeTab === 'users' && !error && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
+          <h2 className="text-xl font-bold text-white md:hidden mb-4 border-b border-surface-600/50 pb-2">
+            <i className="fi fi-rr-users mr-2 text-primary-500"></i>
+            Gerenciar Usuários
+          </h2>
           <div className="flex justify-between items-center flex-wrap gap-4 mb-4">
             <div className="relative max-w-md w-full">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -196,7 +260,7 @@ const AdminPage = () => {
                 className="w-full bg-surface-700/50 border border-surface-600 rounded-lg pl-10 pr-4 py-2 text-white outline-none focus:border-primary-500 transition-colors placeholder:text-slate-500"
               />
             </div>
-            <Button variant="primary" className="flex items-center gap-2 opacity-50 cursor-not-allowed" title="Em breve">
+            <Button variant="primary" className="flex items-center gap-2" onClick={() => setIsCreateModalOpen(true)}>
               <i className="fi fi-rr-plus"></i> Novo Usuário
             </Button>
           </div>
@@ -211,6 +275,7 @@ const AdminPage = () => {
                     <th className="py-3 px-4 text-sm font-semibold text-slate-300">E-mail</th>
                     <th className="py-3 px-4 text-sm font-semibold text-slate-300">Cargo</th>
                     <th className="py-3 px-4 text-sm font-semibold text-slate-300">Status</th>
+                    <th className="py-3 px-4 text-sm font-semibold text-slate-300">Último Acesso</th>
                     <th className="py-3 px-4 text-sm font-semibold text-slate-300">Ações Rápidas</th>
                   </tr>
                 </thead>
@@ -231,6 +296,9 @@ const AdminPage = () => {
                         ) : (
                           <span className="px-2 py-1 rounded text-xs font-semibold bg-green-500/20 text-green-400">Ativo</span>
                         )}
+                      </td>
+                      <td className="py-3 px-4 text-sm text-slate-300 whitespace-nowrap">
+                        {user.lastLogin ? new Date(user.lastLogin).toLocaleString('pt-BR') : <span className="text-slate-500 italic">Nunca</span>}
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2">
@@ -278,7 +346,11 @@ const AdminPage = () => {
 
       {/* REPORTS / SETTINGS (PLACEHOLDERS) */}
       {(activeTab === 'reports' || activeTab === 'settings') && !error && (
-        <div className="card-surface p-12 flex flex-col items-center justify-center text-center">
+        <div className="card-surface p-12 flex flex-col items-center justify-center text-center animate-fade-in">
+          <h2 className="text-xl font-bold text-white md:hidden mb-8 border-b border-surface-600/50 pb-2 w-full text-left">
+            <i className={`fi ${activeTab === 'reports' ? 'fi-rr-chart-pie-alt text-purple-500' : 'fi-rr-settings text-emerald-500'} mr-2`}></i>
+            {activeTab === 'reports' ? 'Relatórios' : 'Configurações'}
+          </h2>
           <i className={`fi ${activeTab === 'reports' ? 'fi-rr-chart-pie-alt' : 'fi-rr-settings'} text-6xl text-surface-600 mb-4`}></i>
           <h2 className="text-2xl font-bold text-white mb-2">Módulo em Desenvolvimento</h2>
           <p className="text-slate-400 max-w-md">
@@ -287,6 +359,136 @@ const AdminPage = () => {
         </div>
       )}
 
+      {/* PARAMETERS TAB */}
+      {activeTab === 'parameters' && !error && (
+        <div className="space-y-4 animate-fade-in">
+          <h2 className="text-xl font-bold text-white md:hidden mb-4 border-b border-surface-600/50 pb-2">
+            <i className="fi fi-rr-settings-sliders mr-2 text-primary-500"></i>
+            Parâmetros do Sistema
+          </h2>
+          <div className="flex justify-between items-center flex-wrap gap-4 mb-4">
+            <div className="relative max-w-md w-full">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                <i className="fi fi-rr-search"></i>
+              </div>
+              <input
+                type="text"
+                value={paramsSearch}
+                onChange={(e) => setParamsSearch(e.target.value)}
+                placeholder="Buscar por ID ou nome do parâmetro..."
+                className="w-full bg-surface-700/50 border border-surface-600 rounded-lg pl-10 pr-4 py-2 text-white outline-none focus:border-primary-500 transition-colors placeholder:text-slate-500"
+              />
+            </div>
+          </div>
+          
+          <div className="card-surface overflow-hidden">
+            {isLoadingParams ? (
+              <div className="p-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div></div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[600px]">
+                  <thead>
+                    <tr className="bg-surface-700/50 border-b border-surface-600">
+                      <th className="py-3 px-4 text-sm font-semibold text-slate-300">Chave / Descrição</th>
+                      <th className="py-3 px-4 text-sm font-semibold text-slate-300">Valor Atual</th>
+                      <th className="py-3 px-4 text-sm font-semibold text-slate-300">Ação</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parameters.filter(p => p.key.toLowerCase().includes(paramsSearch.toLowerCase())).map((param) => (
+                      <tr key={param.id} className="border-b border-surface-600/50 hover:bg-surface-700/20 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-white">{param.key}</div>
+                          <div className="text-sm text-slate-400">{param.description}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          {param.value === 'true' || param.value === 'false' ? (
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${param.value === 'true' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                              {param.value === 'true' ? 'ATIVADO' : 'DESATIVADO'}
+                            </span>
+                          ) : (
+                            <span className="text-white">{param.value}</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {param.value === 'true' || param.value === 'false' ? (
+                            <Button variant="ghost" onClick={() => handleUpdateParameter(param.key, param.value === 'true' ? 'false' : 'true')} className="!py-1 !px-3 text-xs border border-surface-600">
+                              <i className="fi fi-rr-exchange text-sm mr-1"></i> Alternar
+                            </Button>
+                          ) : (
+                            <Button variant="ghost" onClick={() => {
+                              const newVal = prompt(`Novo valor para ${param.key}:`, param.value);
+                              if (newVal !== null) handleUpdateParameter(param.key, newVal);
+                            }} className="!py-1 !px-3 text-xs border border-surface-600">
+                              <i className="fi fi-rr-edit text-sm mr-1"></i> Editar
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {parameters.length === 0 && (
+                      <tr><td colSpan={3} className="text-center py-8 text-slate-400">Nenhum parâmetro encontrado.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal Novo Usuário */}
+      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Novo Usuário">
+        <form onSubmit={handleCreateUser} className="space-y-4">
+          <Input
+            label="Nome Completo"
+            value={newUserForm.name}
+            onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
+            placeholder="Ex: João da Silva"
+            required
+            autoFocus
+          />
+          <Input
+            label="E-mail"
+            type="email"
+            value={newUserForm.email}
+            onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
+            placeholder="joao@exemplo.com"
+            required
+          />
+          <Input
+            label="Senha de Acesso"
+            type="text"
+            value={newUserForm.password}
+            onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+            placeholder="Mínimo 6 caracteres"
+            required
+            minLength={6}
+          />
+          
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-slate-300">Nível de Acesso (Cargo)</label>
+            <select 
+              value={newUserForm.role} 
+              onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })}
+              className="w-full bg-surface-700/50 border border-surface-600 rounded-lg px-3 py-2 text-white outline-none focus:border-primary-500 transition-colors"
+            >
+              <option value="USER">Usuário Comum (USER)</option>
+              <option value="ADMIN">Administrador (ADMIN)</option>
+            </select>
+            <p className="text-xs text-slate-400 mt-1">
+              Administradores têm acesso a este painel e podem gerenciar outros usuários.
+            </p>
+          </div>
+          
+          <div className="pt-4 flex justify-end gap-3">
+            <Button type="button" variant="ghost" onClick={() => setIsCreateModalOpen(false)}>Cancelar</Button>
+            <Button type="submit" variant="primary" disabled={actionLoading}>
+              {actionLoading ? 'Criando...' : 'Criar Usuário'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Modal Editar Usuário */}
       <Modal isOpen={!!editingUser} onClose={() => setEditingUser(null)} title="Editar Usuário">

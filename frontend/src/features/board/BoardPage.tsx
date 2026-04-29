@@ -12,15 +12,11 @@ import {
   type DragOverEvent,
   type DragEndEvent
 } from '@dnd-kit/core';
-import { 
-  SortableContext, 
-  horizontalListSortingStrategy, 
-  arrayMove,
-  sortableKeyboardCoordinates
-} from '@dnd-kit/sortable';
+import { SortableContext, horizontalListSortingStrategy, arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { api } from '../../services/api';
+import { useAuthStore } from '../../store/authStore';
 import { useBoardStore } from '../../store/boardStore';
-import type { Board, Column, Card, Priority } from '../../types';
+import type { Board, Column, Card, Priority, Client } from '../../types';
 import BoardColumn from './components/BoardColumn';
 import TaskCard from './components/TaskCard';
 import Button from '../../components/ui/Button';
@@ -33,6 +29,7 @@ const ICONS = ['fi-rr-chalkboard', 'fi-rr-briefcase', 'fi-rr-rocket', 'fi-rr-sta
 const BoardPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const { currentBoard, setCurrentBoard, boards, setBoards } = useBoardStore();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +42,14 @@ const BoardPage = () => {
   const [isColModalOpen, setIsColModalOpen] = useState(false);
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [isEditBoardModalOpen, setIsEditBoardModalOpen] = useState(false);
+  const [isShowDoneOpen, setIsShowDoneOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  
+  const [colTitle, setColTitle] = useState('');
+  
+  // Board share state
+  const [shareCodeInput, setShareCodeInput] = useState('');
+  const [isSharing, setIsSharing] = useState(false);
   
   const [colTitle, setColTitle] = useState('');
   
@@ -59,10 +64,28 @@ const BoardPage = () => {
   const [cardTitle, setCardTitle] = useState('');
   const [cardDesc, setCardDesc] = useState('');
   const [cardPriority, setCardPriority] = useState<Priority>('MEDIUM');
+  const [cardClientId, setCardClientId] = useState<number | ''>('');
+  const [cardIsDone, setCardIsDone] = useState(false);
+  const [cardChecklists, setCardChecklists] = useState<Checklist[]>([]);
+  const [newChecklistTitle, setNewChecklistTitle] = useState('');
+  
+  // Clients state
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isNewClientMode, setIsNewClientMode] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientDoc, setNewClientDoc] = useState('');
 
   useEffect(() => {
     fetchBoard();
+    fetchClients();
   }, [id]);
+
+  const fetchClients = async () => {
+    try {
+      const { data } = await api.get('/clients');
+      setClients(data);
+    } catch (e) { console.error(e); }
+  };
 
   const fetchBoard = async () => {
     try {
@@ -228,6 +251,13 @@ const BoardPage = () => {
     setCardTitle('');
     setCardDesc('');
     setCardPriority('MEDIUM');
+    setCardClientId('');
+    setCardIsDone(false);
+    setCardChecklists([]);
+    setNewChecklistTitle('');
+    setIsNewClientMode(false);
+    setNewClientName('');
+    setNewClientDoc('');
     setIsCardModalOpen(true);
   };
 
@@ -236,6 +266,13 @@ const BoardPage = () => {
      setCardTitle(card.title);
      setCardDesc(card.description || '');
      setCardPriority(card.priority);
+     setCardClientId(card.clientId || '');
+     setCardIsDone(card.isDone || false);
+     setCardChecklists(card.checklists || []);
+     setNewChecklistTitle('');
+     setIsNewClientMode(false);
+     setNewClientName('');
+     setNewClientDoc('');
      setIsCardModalOpen(true);
   };
 
@@ -259,6 +296,36 @@ const BoardPage = () => {
       setCurrentBoard({ ...currentBoard, ...data });
       setBoards(boards.map(b => b.id === currentBoard.id ? { ...b, ...data } : b));
       setIsEditBoardModalOpen(false);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleShareBoard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!shareCodeInput.trim() || !currentBoard) return;
+    setIsSharing(true);
+    try {
+      const { data } = await api.post(`/boards/${currentBoard.id}/share`, { shareCode: shareCodeInput });
+      const updatedSharedWith = [...(currentBoard.sharedWith || []), data];
+      setCurrentBoard({ ...currentBoard, sharedWith: updatedSharedWith });
+      setShareCodeInput('');
+      setBoards(boards.map(b => b.id === currentBoard.id ? { ...b, sharedWith: updatedSharedWith } : b));
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Erro ao compartilhar quadro.');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleRemoveShare = async (sharedUserId: number) => {
+    if (!currentBoard) return;
+    if (!confirm('Remover acesso deste usuário ao quadro?')) return;
+    try {
+      await api.delete(`/boards/${currentBoard.id}/share/${sharedUserId}`);
+      const updatedSharedWith = (currentBoard.sharedWith || []).filter(s => s.userId !== sharedUserId);
+      setCurrentBoard({ ...currentBoard, sharedWith: updatedSharedWith });
+      setBoards(boards.map(b => b.id === currentBoard.id ? { ...b, sharedWith: updatedSharedWith } : b));
     } catch (e) {
       console.error(e);
     }
@@ -294,12 +361,24 @@ const BoardPage = () => {
     if (!currentBoard) return;
 
     try {
+      let finalClientId: number | undefined = cardClientId === '' ? undefined : Number(cardClientId);
+
+      if (isNewClientMode && newClientName.trim()) {
+         const { data: newClient } = await api.post('/clients', { name: newClientName, document: newClientDoc });
+         finalClientId = newClient.id;
+         setClients([...clients, newClient].sort((a, b) => a.name.localeCompare(b.name)));
+      }
+
+      const payload = {
+          title: cardTitle,
+          description: cardDesc,
+          priority: cardPriority,
+          clientId: finalClientId,
+          isDone: cardIsDone
+      };
+
       if (editingCard) {
-         const { data } = await api.patch(`/cards/${editingCard.id}`, {
-            title: cardTitle,
-            description: cardDesc,
-            priority: cardPriority
-         });
+         const { data } = await api.patch(`/cards/${editingCard.id}`, payload);
          
          const newCols = currentBoard.columns.map(col => ({
              ...col,
@@ -307,11 +386,7 @@ const BoardPage = () => {
          }));
          setCurrentBoard({ ...currentBoard, columns: newCols });
       } else if (selectedColId) {
-         const { data } = await api.post(`/columns/${selectedColId}/cards`, {
-            title: cardTitle,
-            description: cardDesc,
-            priority: cardPriority
-         });
+         const { data } = await api.post(`/columns/${selectedColId}/cards`, payload);
 
          const newCols = currentBoard.columns.map(col => {
              if (col.id === selectedColId) {
@@ -322,7 +397,8 @@ const BoardPage = () => {
          setCurrentBoard({ ...currentBoard, columns: newCols });
       }
       setIsCardModalOpen(false);
-    } catch (e) {
+    } catch (e: any) {
+      alert(e.response?.data?.message || 'Erro ao salvar cartão.');
       console.error(e);
     }
   };
@@ -344,6 +420,48 @@ const BoardPage = () => {
      }
   }
 
+  // --- Checklist Handlers ---
+  const handleAddChecklist = async () => {
+    if (!editingCard || !newChecklistTitle.trim()) return;
+    try {
+      const { data } = await api.post(`/cards/${editingCard.id}/checklists`, { title: newChecklistTitle });
+      setCardChecklists([...cardChecklists, data]);
+      setNewChecklistTitle('');
+    } catch (e) { console.error(e); }
+  };
+
+  const handleDeleteChecklist = async (checklistId: number) => {
+    if (!editingCard) return;
+    try {
+      await api.delete(`/cards/${editingCard.id}/checklists/${checklistId}`);
+      setCardChecklists(cardChecklists.filter(c => c.id !== checklistId));
+    } catch (e) { console.error(e); }
+  };
+
+  const handleAddChecklistItem = async (checklistId: number, text: string, isMandatory: boolean) => {
+    if (!editingCard || !text.trim()) return;
+    try {
+      const { data } = await api.post(`/cards/${editingCard.id}/checklists/${checklistId}/items`, { text, isMandatory });
+      setCardChecklists(cardChecklists.map(c => c.id === checklistId ? { ...c, items: [...c.items, data] } : c));
+    } catch (e) { console.error(e); }
+  };
+
+  const handleToggleChecklistItem = async (checklistId: number, itemId: number, isCompleted: boolean) => {
+    if (!editingCard) return;
+    try {
+      const { data } = await api.patch(`/cards/${editingCard.id}/checklists/${checklistId}/items/${itemId}`, { isCompleted });
+      setCardChecklists(cardChecklists.map(c => c.id === checklistId ? { ...c, items: c.items.map(i => i.id === itemId ? data : i) } : c));
+    } catch (e) { console.error(e); }
+  };
+  
+  const handleDeleteChecklistItem = async (checklistId: number, itemId: number) => {
+    if (!editingCard) return;
+    try {
+      await api.delete(`/cards/${editingCard.id}/checklists/${checklistId}/items/${itemId}`);
+      setCardChecklists(cardChecklists.map(c => c.id === checklistId ? { ...c, items: c.items.filter(i => i.id !== itemId) } : c));
+    } catch (e) { console.error(e); }
+  };
+
   if (isLoading) return <div className="flex-1 flex justify-center items-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div></div>;
   if (!currentBoard) return <div className="p-8 text-center text-red-400">Board not found</div>;
 
@@ -361,7 +479,17 @@ const BoardPage = () => {
              </button>
            </div>
         </div>
-        <Button onClick={() => setIsColModalOpen(true)} className="w-full sm:w-auto shrink-0">Adicionar Coluna</Button>
+        <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          {user?.id === currentBoard.userId && (
+            <Button variant="ghost" onClick={() => setIsShareModalOpen(true)} className="flex items-center gap-2">
+              <i className="fi fi-rr-share"></i> Compartilhar
+            </Button>
+          )}
+          <Button variant="ghost" onClick={() => setIsShowDoneOpen(true)} className="flex items-center gap-2">
+            <i className="fi fi-rr-check-circle"></i> Ver Concluídos
+          </Button>
+          <Button onClick={() => setIsColModalOpen(true)}>Adicionar Coluna</Button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-x-auto overflow-y-hidden pb-4 custom-scrollbar">
@@ -377,16 +505,19 @@ const BoardPage = () => {
               items={currentBoard.columns.map(c => `column-${c.id}`)}
               strategy={horizontalListSortingStrategy}
             >
-              {currentBoard.columns.map((col) => (
-                <BoardColumn 
-                  key={col.id} 
-                  column={col} 
-                  cards={col.cards}
-                  onAddCard={openAddCardModal}
-                  onCardClick={openEditCardModal}
-                  onDeleteColumn={handleDeleteColumn}
-                />
-              ))}
+              {currentBoard.columns.map((col) => {
+                const activeCards = col.cards.filter(c => !c.isDone);
+                return (
+                  <BoardColumn 
+                    key={col.id} 
+                    column={col} 
+                    cards={activeCards}
+                    onAddCard={openAddCardModal}
+                    onCardClick={openEditCardModal}
+                    onDeleteColumn={handleDeleteColumn}
+                  />
+                );
+              })}
             </SortableContext>
             
             {/* Empty state visually representing "add zone" */}
@@ -429,6 +560,21 @@ const BoardPage = () => {
 
        {/* Card Modal */}
        <Modal isOpen={isCardModalOpen} onClose={() => setIsCardModalOpen(false)} title={editingCard ? "Editar Cartão" : "Novo Cartão"}>
+          <div className="flex gap-4 mb-4">
+             {editingCard && (
+               <label className="flex items-center gap-2 cursor-pointer bg-surface-800 border border-surface-600 px-3 py-2 rounded-lg hover:border-primary-500 transition-colors">
+                 <input 
+                   type="checkbox" 
+                   checked={cardIsDone} 
+                   onChange={(e) => setCardIsDone(e.target.checked)}
+                   className="w-4 h-4 text-primary-500 rounded border-surface-600 focus:ring-primary-500 bg-surface-900"
+                 />
+                 <span className={`font-semibold ${cardIsDone ? 'text-green-400' : 'text-slate-300'}`}>
+                    Marcar como Concluído
+                 </span>
+               </label>
+             )}
+          </div>
           <form onSubmit={handleSaveCard} className="space-y-4">
              <Input label="Título" value={cardTitle} onChange={e => setCardTitle(e.target.value)} required autoFocus/>
              <div className="w-full">
@@ -439,6 +585,36 @@ const BoardPage = () => {
                   onChange={e => setCardDesc(e.target.value)} 
                 />
              </div>
+             
+             <div className="border border-surface-600 rounded-lg p-3 bg-surface-800/50">
+               <div className="flex justify-between items-center mb-2">
+                 <label className="block text-sm font-medium text-primary-400">Cliente / CRM</label>
+                 <button 
+                   type="button" 
+                   onClick={() => setIsNewClientMode(!isNewClientMode)} 
+                   className="text-xs text-slate-400 hover:text-white transition-colors flex items-center gap-1"
+                 >
+                   <i className={`fi ${isNewClientMode ? 'fi-rr-list' : 'fi-rr-plus'}`}></i>
+                   {isNewClientMode ? 'Selecionar Existente' : 'Cadastrar Novo'}
+                 </button>
+               </div>
+               
+               {isNewClientMode ? (
+                 <div className="space-y-3 animate-fade-in bg-surface-900/50 p-3 rounded border border-surface-700">
+                   <Input label="Nome / Razão Social" value={newClientName} onChange={e => setNewClientName(e.target.value)} required={isNewClientMode} />
+                   <Input label="CPF ou CNPJ (Opcional)" value={newClientDoc} onChange={e => setNewClientDoc(e.target.value)} />
+                   <p className="text-xs text-slate-500 mt-1"><i className="fi fi-rr-info mr-1"></i>Preencha os demais dados fiscais na aba "Clientes" posteriormente.</p>
+                 </div>
+               ) : (
+                 <select className="input-field" value={cardClientId} onChange={e => setCardClientId(e.target.value ? Number(e.target.value) : '')}>
+                   <option value="">Nenhum cliente associado</option>
+                   {clients.map(c => (
+                     <option key={c.id} value={c.id}>{c.name} {c.document ? `(${c.document})` : ''}</option>
+                   ))}
+                 </select>
+               )}
+
+
              <div className="w-full">
                 <label className="block text-sm font-medium text-slate-300 mb-1.5">Prioridade</label>
                 <select className="input-field" value={cardPriority} onChange={e => setCardPriority(e.target.value as Priority)}>
@@ -447,6 +623,75 @@ const BoardPage = () => {
                    <option value="HIGH">Alta</option>
                 </select>
              </div>
+
+             {/* Checklists Section */}
+             {editingCard && (
+               <div className="border border-surface-600 rounded-lg p-3 bg-surface-800/50 mt-4 space-y-4">
+                 <h3 className="text-sm font-semibold text-primary-400">To-Do Lists (Checklists)</h3>
+                 
+                 {cardChecklists.map(checklist => {
+                    const progress = checklist.items.length === 0 ? 0 : Math.round((checklist.items.filter(i => i.isCompleted).length / checklist.items.length) * 100);
+                    return (
+                      <div key={checklist.id} className="bg-surface-900 border border-surface-700 rounded-lg p-3">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="font-semibold text-white">{checklist.title}</h4>
+                          <button type="button" onClick={() => handleDeleteChecklist(checklist.id)} className="text-slate-500 hover:text-red-400">
+                            <i className="fi fi-rr-trash"></i>
+                          </button>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 mb-3">
+                           <span className="text-xs text-slate-400 w-8">{progress}%</span>
+                           <div className="h-1.5 w-full bg-surface-700 rounded-full overflow-hidden">
+                             <div className={`h-full rounded-full transition-all ${progress === 100 ? 'bg-green-500' : 'bg-primary-500'}`} style={{ width: `${progress}%` }}></div>
+                           </div>
+                        </div>
+
+                        <div className="space-y-2 mb-3">
+                          {checklist.items.map(item => (
+                            <div key={item.id} className="flex items-center gap-2 group">
+                              <input 
+                                type="checkbox" 
+                                checked={item.isCompleted} 
+                                onChange={(e) => handleToggleChecklistItem(checklist.id, item.id, e.target.checked)}
+                                className="w-4 h-4 rounded border-surface-600 text-primary-500 focus:ring-primary-500"
+                              />
+                              <span className={`text-sm flex-1 ${item.isCompleted ? 'text-slate-500 line-through' : 'text-slate-300'}`}>
+                                {item.text} {item.isMandatory && <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded ml-1">Obrigatório</span>}
+                              </span>
+                              <button type="button" onClick={() => handleDeleteChecklistItem(checklist.id, item.id)} className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 transition-opacity">
+                                <i className="fi fi-rr-cross-small"></i>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <form onSubmit={(e) => {
+                          e.preventDefault();
+                          const target = e.target as HTMLFormElement;
+                          const input = target.elements.namedItem('text') as HTMLInputElement;
+                          const checkbox = target.elements.namedItem('isMandatory') as HTMLInputElement;
+                          handleAddChecklistItem(checklist.id, input.value, checkbox.checked);
+                          input.value = '';
+                          checkbox.checked = false;
+                        }} className="flex gap-2 items-center mt-2 border-t border-surface-700 pt-2">
+                          <input type="text" name="text" placeholder="Adicionar item..." className="input-field text-sm !py-1.5 flex-1" required />
+                          <label className="flex items-center gap-1 text-xs text-slate-400 cursor-pointer">
+                            <input type="checkbox" name="isMandatory" className="rounded bg-surface-900 border-surface-600 w-3 h-3 text-primary-500" />
+                            Obrigatório
+                          </label>
+                          <Button type="submit" variant="primary" className="!py-1.5 !px-3 text-xs">Add</Button>
+                        </form>
+                      </div>
+                    );
+                 })}
+
+                 <div className="flex gap-2">
+                   <input type="text" placeholder="Nova Checklist..." value={newChecklistTitle} onChange={e => setNewChecklistTitle(e.target.value)} className="input-field text-sm" onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddChecklist(); } }} />
+                   <Button type="button" variant="ghost" onClick={handleAddChecklist}>Add</Button>
+                 </div>
+               </div>
+             )}
              <div className="flex justify-between items-center pt-4 border-t border-surface-700">
                {editingCard ? (
                   <Button type="button" variant="danger" onClick={handleDeleteCard}>Deletar</Button>
@@ -496,6 +741,110 @@ const BoardPage = () => {
                <Button type="submit">Salvar</Button>
              </div>
           </form>
+       </Modal>
+       {/* Completed Cards Overlay */}
+       {isShowDoneOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
+            <div className="bg-surface-800 border border-surface-600 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl animate-fade-in">
+              <div className="p-5 border-b border-surface-600 flex justify-between items-center bg-surface-900/30 rounded-t-2xl">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <i className="fi fi-rr-check-circle text-green-500"></i> Cartões Concluídos
+                </h2>
+                <button onClick={() => setIsShowDoneOpen(false)} className="text-slate-400 hover:text-white p-1 rounded hover:bg-surface-700 transition-colors">
+                  <i className="fi fi-rr-cross"></i>
+                </button>
+              </div>
+              <div className="p-6 flex-1 overflow-y-auto space-y-4">
+                {currentBoard.columns.flatMap(col => col.cards.filter(c => c.isDone)).length === 0 ? (
+                  <div className="text-center py-12 text-slate-400">
+                    <i className="fi fi-rr-box-open text-4xl mb-3 opacity-50 block"></i>
+                    Nenhum cartão concluído encontrado neste quadro.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {currentBoard.columns.flatMap(col => col.cards.filter(c => c.isDone).map(c => ({...c, columnName: col.title}))).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()).map(card => (
+                      <div key={card.id} className="card-surface p-4 border border-surface-600 hover:border-surface-500 transition-colors cursor-pointer group" onClick={() => { setIsShowDoneOpen(false); openEditCardModal(card as any); }}>
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-semibold text-white line-through opacity-70 group-hover:opacity-100 transition-opacity">{card.title}</h3>
+                          <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-semibold">CONCLUÍDO</span>
+                        </div>
+                        <p className="text-xs text-slate-400 mb-3 truncate">{card.description || 'Sem descrição'}</p>
+                        <div className="flex justify-between items-center text-xs text-slate-500">
+                          <span>Da coluna: {card.columnName}</span>
+                          <span>{new Date(card.updatedAt).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+       )}
+
+       {/* Share Board Modal */}
+       <Modal isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} title="Compartilhar Quadro">
+          <form onSubmit={handleShareBoard} className="space-y-4">
+             <div className="flex gap-2">
+               <div className="flex-1">
+                 <Input 
+                   label="Código de Compartilhamento do Usuário" 
+                   value={shareCodeInput} 
+                   onChange={e => setShareCodeInput(e.target.value)} 
+                   placeholder="Ex: cm2x9a..." 
+                   required 
+                 />
+               </div>
+               <div className="pt-7">
+                 <Button type="submit" isLoading={isSharing}>Adicionar</Button>
+               </div>
+             </div>
+          </form>
+
+          <div className="mt-6 pt-6 border-t border-surface-700">
+             <h3 className="text-sm font-medium text-slate-300 mb-4">Pessoas com acesso</h3>
+             <div className="space-y-2">
+                <div className="flex justify-between items-center bg-surface-900/50 p-3 rounded-lg border border-surface-700">
+                   <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary-500/20 text-primary-400 flex items-center justify-center font-bold">
+                        {currentBoard.user?.name?.charAt(0).toUpperCase() || 'V'}
+                      </div>
+                      <div>
+                         <p className="text-sm font-medium text-white">{currentBoard.user?.name || 'Você'}</p>
+                         <p className="text-xs text-slate-400">{currentBoard.user?.email || ''}</p>
+                      </div>
+                   </div>
+                   <span className="text-xs font-semibold text-primary-500 bg-primary-500/10 px-2 py-1 rounded">Proprietário</span>
+                </div>
+
+                {(currentBoard.sharedWith || []).map(share => (
+                  <div key={share.userId} className="flex justify-between items-center bg-surface-800 p-3 rounded-lg border border-surface-600">
+                     <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-surface-600 text-slate-300 flex items-center justify-center font-bold">
+                          {share.user.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                           <p className="text-sm font-medium text-white">{share.user.name}</p>
+                           <p className="text-xs text-slate-400">{share.user.email}</p>
+                        </div>
+                     </div>
+                     <button 
+                       onClick={() => handleRemoveShare(share.userId)}
+                       className="text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-surface-700 transition-colors"
+                       title="Remover acesso"
+                     >
+                       <i className="fi fi-rr-cross-small text-lg"></i>
+                     </button>
+                  </div>
+                ))}
+                
+                {(currentBoard.sharedWith || []).length === 0 && (
+                   <div className="text-sm text-slate-500 text-center py-4">
+                      Este quadro não está compartilhado com ninguém ainda.
+                   </div>
+                )}
+             </div>
+          </div>
        </Modal>
     </div>
   );

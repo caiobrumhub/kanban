@@ -73,6 +73,57 @@ export class CardsController {
     return this.cardsService.removeLabel(cardId, labelId, userId);
   }
 
+  // ─── Checklists ───────────────────────────────────────────────────────────────
+
+  @Post('cards/:id/checklists')
+  createChecklist(
+    @Param('id', ParseIntPipe) cardId: number,
+    @CurrentUser('id') userId: number,
+    @Body() dto: any,
+  ) {
+    return this.cardsService.createChecklist(cardId, userId, dto);
+  }
+
+  @Delete('cards/:id/checklists/:checklistId')
+  deleteChecklist(
+    @Param('id', ParseIntPipe) cardId: number,
+    @Param('checklistId', ParseIntPipe) checklistId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.cardsService.deleteChecklist(cardId, checklistId, userId);
+  }
+
+  @Post('cards/:id/checklists/:checklistId/items')
+  createChecklistItem(
+    @Param('id', ParseIntPipe) cardId: number,
+    @Param('checklistId', ParseIntPipe) checklistId: number,
+    @CurrentUser('id') userId: number,
+    @Body() dto: any,
+  ) {
+    return this.cardsService.createChecklistItem(cardId, checklistId, userId, dto);
+  }
+
+  @Patch('cards/:id/checklists/:checklistId/items/:itemId')
+  updateChecklistItem(
+    @Param('id', ParseIntPipe) cardId: number,
+    @Param('checklistId', ParseIntPipe) checklistId: number,
+    @Param('itemId', ParseIntPipe) itemId: number,
+    @CurrentUser('id') userId: number,
+    @Body() dto: any,
+  ) {
+    return this.cardsService.updateChecklistItem(cardId, checklistId, itemId, userId, dto);
+  }
+
+  @Delete('cards/:id/checklists/:checklistId/items/:itemId')
+  deleteChecklistItem(
+    @Param('id', ParseIntPipe) cardId: number,
+    @Param('checklistId', ParseIntPipe) checklistId: number,
+    @Param('itemId', ParseIntPipe) itemId: number,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.cardsService.deleteChecklistItem(cardId, checklistId, itemId, userId);
+  }
+
   @Post('columns/:columnId/cards/reorder')
   reorder(
     @Param('columnId', ParseIntPipe) columnId: number,

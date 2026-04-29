@@ -64,6 +64,16 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                 <i className="fi fi-rr-apps mt-1"></i>
                 Dashboard
               </Link>
+              <Link 
+                to="/clients" 
+                onClick={onClose}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                  isActive('/clients') ? 'bg-primary-500/10 text-primary-400' : 'text-slate-300 hover:bg-surface-800 hover:text-white'
+                }`}
+              >
+                <i className="fi fi-rr-users-alt mt-1"></i>
+                Clientes
+              </Link>
             </nav>
           </div>
 
@@ -85,6 +95,9 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                   <div className="flex items-center gap-3 truncate">
                     <i className={`fi ${board.icon || 'fi-rr-chalkboard'} mt-1`}></i>
                     <span className="truncate">{board.title}</span>
+                    {board.userId !== user?.id && (
+                      <i className="fi fi-rr-users-alt text-[10px] text-primary-500 mt-0.5" title="Quadro Compartilhado com você"></i>
+                    )}
                   </div>
                   {/* Board Counter */}
                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
@@ -125,9 +138,25 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
         {/* User Info Bottom */}
         <div className="p-4 border-t border-surface-600/50">
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-1">
             <span className="text-sm font-medium text-white truncate">{user?.name}</span>
             <span className="text-xs text-slate-400 truncate">{user?.email}</span>
+            {user?.shareCode && (
+              <div 
+                className="mt-2 flex items-center justify-between bg-surface-800 rounded px-2 py-1.5 cursor-pointer hover:bg-surface-700 transition-colors group"
+                onClick={() => {
+                  navigator.clipboard.writeText(user.shareCode!);
+                  alert('Código de compartilhamento copiado!');
+                }}
+                title="Clique para copiar seu código de compartilhamento"
+              >
+                <div className="flex items-center gap-2">
+                  <i className="fi fi-rr-share text-primary-500 text-xs mt-0.5"></i>
+                  <span className="text-xs font-mono text-slate-300">{user.shareCode}</span>
+                </div>
+                <i className="fi fi-rr-copy text-slate-500 group-hover:text-white text-xs"></i>
+              </div>
+            )}
           </div>
         </div>
       </aside>

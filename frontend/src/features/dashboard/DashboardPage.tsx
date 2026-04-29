@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 import { useBoardStore } from '../../store/boardStore';
 import { api } from '../../services/api';
 import type { Board } from '../../types';
@@ -12,6 +13,7 @@ const ICONS = ['fi-rr-chalkboard', 'fi-rr-briefcase', 'fi-rr-rocket', 'fi-rr-sta
 
 const DashboardPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const { boards, setBoards } = useBoardStore();
   const [error, setError] = useState('');
 
@@ -126,16 +128,23 @@ const DashboardPage = () => {
                   <i className={`fi ${board.icon || 'fi-rr-chalkboard'} text-xl`}></i>
                 </div>
                 <div className="flex justify-between items-start flex-1 min-w-0">
-                  <h3 className="text-lg font-bold text-white truncate pr-4" title={board.title}>
-                    {board.title}
-                  </h3>
-                  <button 
-                    onClick={(e) => handleDelete(board.id, e)}
-                    className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-surface-700 flex items-center justify-center shrink-0"
-                    title="Excluir quadro"
-                  >
-                    <i className="fi fi-rr-trash"></i>
-                  </button>
+                  <div className="flex flex-col truncate pr-4">
+                    <h3 className="text-lg font-bold text-white truncate" title={board.title}>
+                      {board.title}
+                    </h3>
+                    {board.userId !== user?.id && (
+                      <span className="text-[10px] text-primary-400 flex items-center gap-1 mt-0.5"><i className="fi fi-rr-users-alt"></i> Compartilhado</span>
+                    )}
+                  </div>
+                  {board.userId === user?.id && (
+                    <button 
+                      onClick={(e) => handleDelete(board.id, e)}
+                      className="text-slate-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded hover:bg-surface-700 flex items-center justify-center shrink-0"
+                      title="Excluir quadro"
+                    >
+                      <i className="fi fi-rr-trash"></i>
+                    </button>
+                  )}
                 </div>
               </div>
               
@@ -145,9 +154,16 @@ const DashboardPage = () => {
                   {board._count?.columns || 0} colunas
                 </span>
                 
-                <span className="text-xs">
-                  {new Date(board.updatedAt).toLocaleDateString()}
-                </span>
+                <div className="flex items-center gap-3">
+                  {board.sharedWith && board.sharedWith.length > 0 && (
+                    <span className="flex items-center gap-1 text-primary-500/70 text-xs" title={`Compartilhado com ${board.sharedWith.length} pessoa(s)`}>
+                      <i className="fi fi-rr-users text-[10px]"></i> {board.sharedWith.length}
+                    </span>
+                  )}
+                  <span className="text-xs">
+                    {new Date(board.updatedAt).toLocaleDateString()}
+                  </span>
+                </div>
               </div>
             </Link>
           ))}

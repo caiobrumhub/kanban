@@ -18,7 +18,10 @@ export class CreateCardDto {
   priority?: Priority;
 
   @IsOptional()
-  @IsInt()
-  @Min(0)
+  @IsNumber()
   order?: number;
+
+  @IsOptional()
+  @IsNumber()
+  clientId?: number;
 }

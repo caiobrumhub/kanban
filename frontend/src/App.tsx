@@ -12,6 +12,7 @@ import RegisterPage from './features/auth/RegisterPage';
 import DashboardPage from './features/dashboard/DashboardPage';
 import BoardPage from './features/board/BoardPage';
 import AdminPage from './features/admin/AdminPage';
+import ClientsPage from './features/clients/ClientsPage';
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const user = useAuthStore((state) => state.user);
@@ -57,6 +58,7 @@ function App() {
         <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/board/:id" element={<BoardPage />} />
+          <Route path="/clients" element={<ClientsPage />} />
           <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
         </Route>
       </Routes>
